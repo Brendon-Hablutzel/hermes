@@ -9,11 +9,14 @@ import (
 	"slices"
 
 	"hermes/app/aws"
+	"hermes/app/cloudflare"
 	"hermes/app/types"
 
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	"github.com/aws/aws-sdk-go-v2/service/rds"
+
+	cloudflare_sdk "github.com/cloudflare/cloudflare-go/v4"
 )
 
 func findProject(projects []types.ProjectDefinition, name string) (types.ProjectDefinition, bool) {
@@ -118,6 +121,8 @@ func (s *Server) GetResourceSnapshotHandler(w http.ResponseWriter, r *http.Reque
 		status, err = aws.GetRDSStatus(s.rdsClient, resource.Identifier)
 	case types.ELBResource:
 		status, err = aws.GetELBStatus(s.elbClient, resource.Identifier)
+	case types.CloudflarePagesResource:
+		status, err = cloudflare.GetPagesStatus(s.cloudflareClient, resource.Identifier)
 	default:
 		log.Println("invalid resource type encountered", resource.Type)
 		http.Error(w, "invalid resource type", http.StatusInternalServerError)
@@ -235,10 +240,11 @@ func (s *Server) GetResourceSnapshotHandler(w http.ResponseWriter, r *http.Reque
 // }
 
 type Server struct {
-	ecsClient *ecs.Client
-	rdsClient *rds.Client
-	elbClient *elasticloadbalancingv2.Client
-	projects  []types.ProjectDefinition
+	ecsClient        *ecs.Client
+	rdsClient        *rds.Client
+	elbClient        *elasticloadbalancingv2.Client
+	cloudflareClient *cloudflare_sdk.Client
+	projects         []types.ProjectDefinition
 }
 
 func LoggingMiddleware(next http.Handler) http.Handler {
@@ -267,8 +273,14 @@ func getProjectDefinitions() ([]types.ProjectDefinition, error) {
 }
 
 func main() {
-	for _, requiredEnvVar := range []string{"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION"} {
-
+	for _, requiredEnvVar := range []string{
+		"AWS_ACCESS_KEY_ID",
+		"AWS_SECRET_ACCESS_KEY",
+		"AWS_REGION",
+		"CLOUDFLARE_EMAIL",
+		"CLOUDFLARE_API_KEY",
+		"CLOUDFLARE_ACCOUNT_ID",
+	} {
 		_, found := os.LookupEnv(requiredEnvVar)
 
 		if !found {
@@ -304,10 +316,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	cloudflareClient := cloudflare.GetCloudflareClient()
+
 	server := &Server{
 		ecsClient,
 		rdsClient,
 		elbClient,
+		cloudflareClient,
 		projectDefinitions,
 	}
 
