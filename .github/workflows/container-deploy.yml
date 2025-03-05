@@ -21,10 +21,15 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and Push Docker Image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: |
-            ghcr.io/brendon-hablutzel/hermes:latest
+      # - name: Build and Push Docker Image
+      #   uses: docker/build-push-action@v6
+      #   with:
+      #     context: .
+      #     push: true
+      #     tags: |
+      #       ghcr.io/brendon-hablutzel/hermes:latest
+
+      - name: Build and Push Docker Image for amd64 and arm64
+        run: |
+          docker buildx build --platform linux/amd64,linux/arm64 -t ghcr.io/brendon-hablutzel/hermes:latest . \
+          --push
