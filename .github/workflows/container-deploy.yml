@@ -5,6 +5,8 @@ on:
     branches: ["main"]
 
 jobs:
+  # TODO: potentially use matrix to speed up building the various image
+  # https://stackoverflow.com/questions/77740410/github-docker-build-push-action-with-multiple-architectures-is-slow
   build-and-push:
     runs-on: ubuntu-latest
     permissions:
@@ -40,7 +42,9 @@ jobs:
       #     tags: |
       #       ghcr.io/brendon-hablutzel/hermes:latest
 
+      # linux/amd64,linux/arm64
+
       - name: Build and Push Docker Image for amd64 and arm64
         run: |
-          docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v8 -t ghcr.io/brendon-hablutzel/hermes:latest . \
+          docker buildx build --platform linux/arm/v8 -t ghcr.io/brendon-hablutzel/hermes:latest . \
           --push
