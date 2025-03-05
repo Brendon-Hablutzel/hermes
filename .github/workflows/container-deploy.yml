@@ -34,5 +34,5 @@ jobs:
 
       - name: Build and Push Docker Image for amd64 and arm64
         run: |
-          docker buildx build --platform linux/amd64,linux/arm64 -t ghcr.io/brendon-hablutzel/hermes:latest . \
+          docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v8 -t ghcr.io/brendon-hablutzel/hermes:latest . \
           --push
