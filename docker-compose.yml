@@ -1,6 +1,7 @@
 services:
   hermes:
-    build: .
+    image: ghcr.io/brendon-hablutzel/hermes:latest
+    # build: .
     ports:
       - "8080:8080"
     env_file: 
