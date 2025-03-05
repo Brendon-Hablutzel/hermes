@@ -1,4 +1,4 @@
-FROM golang:1.23-alpine
+FROM golang:1.23-alpine AS builder
 
 WORKDIR /app
 
@@ -9,8 +9,12 @@ COPY app app
 
 RUN go build -o main app/main.go
 
-EXPOSE 8080
+FROM alpine:latest
 
-# TODO: separate into builder and exec stages?
+WORKDIR /app
+
+COPY --from=builder /app/main .
+
+EXPOSE 8080
 
 CMD ["./main"]
