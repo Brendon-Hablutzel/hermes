@@ -247,10 +247,26 @@ type Server struct {
 	projects         []types.ProjectDefinition
 }
 
-func LoggingMiddleware(next http.Handler) http.Handler {
+func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			log.Println(r.Method, r.URL.Path)
+
+			next.ServeHTTP(w, r)
+		},
+	)
+}
+
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
 
 			next.ServeHTTP(w, r)
 		},
@@ -332,7 +348,7 @@ func main() {
 	// router.HandleFunc("/projects/{project}/deployments/{deployment}/snapshot", server.GetDeploymentSnapshotHandler)
 	router.HandleFunc("/projects/{project}/deployments/{deployment}/resources/{resource}/snapshot", server.GetResourceSnapshotHandler)
 
-	configuredRouter := LoggingMiddleware(router)
+	configuredRouter := corsMiddleware(loggingMiddleware(router))
 
 	log.Println("Server running on :8080")
 	err = http.ListenAndServe(":8080", configuredRouter)
