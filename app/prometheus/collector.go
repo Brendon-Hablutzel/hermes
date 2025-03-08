@@ -1,6 +1,7 @@
 package prometheus
 
 import (
+	"fmt"
 	"hermes/app/common"
 	"hermes/app/types"
 	"sync"
@@ -80,6 +81,13 @@ func (c *basicCollector) Collect(ch chan<- prometheus.Metric) {
 
 					if err != nil {
 						mu.Lock()
+						fmt.Println(
+							"error fetching resource status",
+							project.Name,
+							deployment.Name,
+							resource.Name,
+							err,
+						)
 						failedFetchResources += 1
 						mu.Unlock()
 						return
