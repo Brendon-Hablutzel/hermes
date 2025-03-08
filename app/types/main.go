@@ -3,9 +3,9 @@ package types
 type ResourceType string
 
 const (
-	ECSResource             ResourceType = "ecs"
-	RDSResource             ResourceType = "rds"
-	ELBResource             ResourceType = "elb"
+	ECSResource             ResourceType = "aws-ecs"
+	RDSResource             ResourceType = "aws-rds"
+	ELBResource             ResourceType = "aws-elb"
 	CloudflarePagesResource ResourceType = "cloudflare-pages"
 )
 
@@ -27,9 +27,12 @@ type ProjectDefinition struct {
 
 type ResourceStatus interface {
 	IsResourceStatus()
+	IsHealthy() bool
+	GetStatusString() string
 }
 
 type ResourceSnapshot struct {
 	Definition ResourceDefinition `json:"definition"`
 	Status     ResourceStatus     `json:"status"`
+	Healthy    bool               `json:"healthy"`
 }

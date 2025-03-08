@@ -3,18 +3,29 @@ package aws
 import (
 	"context"
 	"fmt"
+	"hermes/app/types"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
-	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2/types"
+	elb_types "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2/types"
 )
 
+var _ types.ResourceStatus = ELBStatus{}
+
 type ELBStatus struct {
-	Status  types.LoadBalancerStateEnum `json:"status"`
-	DNSName string                      `json:"dns_name"`
+	Status  elb_types.LoadBalancerStateEnum `json:"status"`
+	DNSName string                          `json:"dns_name"`
 }
 
 func (e ELBStatus) IsResourceStatus() {}
+
+func (e ELBStatus) IsHealthy() bool {
+	return e.Status == "active"
+}
+
+func (e ELBStatus) GetStatusString() string {
+	return string(e.Status)
+}
 
 func GetELBStatus(client *elasticloadbalancingv2.Client, elbName string) (ELBStatus, error) {
 	result, err := client.DescribeLoadBalancers(context.TODO(), &elasticloadbalancingv2.DescribeLoadBalancersInput{

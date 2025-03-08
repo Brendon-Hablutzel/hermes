@@ -10,13 +10,12 @@ import (
 
 	"hermes/app/aws"
 	"hermes/app/cloudflare"
+	"hermes/app/common"
+	"hermes/app/prometheus"
 	"hermes/app/types"
 
-	"github.com/aws/aws-sdk-go-v2/service/ecs"
-	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
-	"github.com/aws/aws-sdk-go-v2/service/rds"
-
-	cloudflare_sdk "github.com/cloudflare/cloudflare-go/v4"
+	prometheus_client "github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func findProject(projects []types.ProjectDefinition, name string) (types.ProjectDefinition, bool) {
@@ -72,7 +71,7 @@ type GetProjectDefinitionResponse struct {
 func (s *Server) GetProjectDefinitionHandler(w http.ResponseWriter, r *http.Request) {
 	projectName := r.PathValue("project")
 
-	project, found := findProject(s.projects, projectName)
+	project, found := findProject(s.Projects, projectName)
 	if !found {
 		http.Error(w, "project not found", http.StatusNotFound)
 		return
@@ -86,7 +85,6 @@ func (s *Server) GetProjectDefinitionHandler(w http.ResponseWriter, r *http.Requ
 		log.Println("failed to encode get project definition response", err)
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 	}
-
 }
 
 func (s *Server) GetResourceSnapshotHandler(w http.ResponseWriter, r *http.Request) {
@@ -94,7 +92,7 @@ func (s *Server) GetResourceSnapshotHandler(w http.ResponseWriter, r *http.Reque
 	deploymentName := r.PathValue("deployment")
 	resourceName := r.PathValue("resource")
 
-	project, found := findProject(s.projects, projectName)
+	project, found := findProject(s.Projects, projectName)
 	if !found {
 		http.Error(w, "project not found", http.StatusNotFound)
 		return
@@ -112,26 +110,11 @@ func (s *Server) GetResourceSnapshotHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var status types.ResourceStatus
-	var err error
-	switch resource.Type {
-	case types.ECSResource:
-		status, err = aws.GetECSStatus(s.ecsClient, resource.Identifier)
-	case types.RDSResource:
-		status, err = aws.GetRDSStatus(s.rdsClient, resource.Identifier)
-	case types.ELBResource:
-		status, err = aws.GetELBStatus(s.elbClient, resource.Identifier)
-	case types.CloudflarePagesResource:
-		status, err = cloudflare.GetPagesStatus(s.cloudflareClient, resource.Identifier)
-	default:
-		log.Println("invalid resource type encountered", resource.Type)
-		http.Error(w, "invalid resource type", http.StatusInternalServerError)
-		return
-	}
+	status, err := common.GetResourceStatus(&s.Clients, resource)
 
 	if err != nil {
-		log.Println("error getting resource details", resource.Type, resource.Identifier, err)
-		http.Error(w, "error getting resource details", http.StatusInternalServerError)
+		log.Println("error getting resource status", err)
+		http.Error(w, "failed to get resource status", http.StatusInternalServerError)
 		return
 	}
 
@@ -239,14 +222,6 @@ func (s *Server) GetResourceSnapshotHandler(w http.ResponseWriter, r *http.Reque
 // 	}
 // }
 
-type Server struct {
-	ecsClient        *ecs.Client
-	rdsClient        *rds.Client
-	elbClient        *elasticloadbalancingv2.Client
-	cloudflareClient *cloudflare_sdk.Client
-	projects         []types.ProjectDefinition
-}
-
 func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -285,7 +260,14 @@ func getProjectDefinitions() ([]types.ProjectDefinition, error) {
 		return []types.ProjectDefinition{}, err
 	}
 
+	// TODO: better error checking, for example ensuring that all resource types are valid
+
 	return projectDefinitions, nil
+}
+
+type Server struct {
+	Clients  common.Clients
+	Projects []types.ProjectDefinition
 }
 
 func main() {
@@ -334,15 +316,24 @@ func main() {
 
 	cloudflareClient := cloudflare.GetCloudflareClient()
 
-	server := &Server{
-		ecsClient,
-		rdsClient,
-		elbClient,
-		cloudflareClient,
-		projectDefinitions,
+	clients := common.Clients{
+		EcsClient:        ecsClient,
+		RdsClient:        rdsClient,
+		ElbClient:        elbClient,
+		CloudflareClient: cloudflareClient,
 	}
 
+	server := &Server{
+		Clients:  clients,
+		Projects: projectDefinitions,
+	}
+
+	collector := prometheus.NewBasicCollector(projectDefinitions, clients)
+	prometheus_client.MustRegister(collector)
+
 	router := http.NewServeMux()
+
+	router.Handle("/metrics", promhttp.Handler())
 
 	router.HandleFunc("/projects/{project}", server.GetProjectDefinitionHandler)
 	// router.HandleFunc("/projects/{project}/deployments/{deployment}/snapshot", server.GetDeploymentSnapshotHandler)

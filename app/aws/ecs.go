@@ -3,11 +3,14 @@ package aws
 import (
 	"context"
 	"fmt"
+	"hermes/app/types"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ecs"
 )
+
+var _ types.ResourceStatus = ECSStatus{}
 
 type ECSStatus struct {
 	Status       string       `json:"status"`
@@ -17,6 +20,14 @@ type ECSStatus struct {
 }
 
 func (e ECSStatus) IsResourceStatus() {}
+
+func (e ECSStatus) IsHealthy() bool {
+	return e.Status == "ACTIVE"
+}
+
+func (e ECSStatus) GetStatusString() string {
+	return e.Status
+}
 
 type ECSService struct {
 	Name         string    `json:"name"`

@@ -3,11 +3,14 @@ package aws
 import (
 	"context"
 	"fmt"
+	"hermes/app/types"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/rds"
 )
+
+var _ types.ResourceStatus = RDSStatus{}
 
 type RDSStatus struct {
 	Status        string `json:"status"`
@@ -15,6 +18,14 @@ type RDSStatus struct {
 }
 
 func (r RDSStatus) IsResourceStatus() {}
+
+func (r RDSStatus) IsHealthy() bool {
+	return r.Status == "available"
+}
+
+func (r RDSStatus) GetStatusString() string {
+	return r.Status
+}
 
 func GetRDSStatus(client *rds.Client, dbIdentifier string) (RDSStatus, error) {
 	resp, err := client.DescribeDBInstances(context.TODO(), &rds.DescribeDBInstancesInput{
