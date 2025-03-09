@@ -9,6 +9,13 @@ const (
 	CloudflarePagesResource ResourceType = "cloudflare-pages"
 )
 
+func IsResourceType(s string) bool {
+	return s == string(ECSResource) ||
+		s == string(RDSResource) ||
+		s == string(ELBResource) ||
+		s == string(CloudflarePagesResource)
+}
+
 type ResourceDefinition struct {
 	Name       string       `json:"name"`
 	Identifier string       `json:"identifier"`

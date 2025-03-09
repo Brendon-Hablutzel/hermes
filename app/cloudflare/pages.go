@@ -13,8 +13,8 @@ import (
 var _ types.ResourceStatus = PagesStatus{}
 
 type PagesStatus struct {
-	CanonicalDeploymentStatus string
-	CanonicalDeploymentUrl    string
+	CanonicalDeploymentStatus string `json:"status"`
+	CanonicalDeploymentUrl    string `json:"url"`
 }
 
 func (p PagesStatus) IsResourceStatus() {}

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"slices"
+	"strings"
 
 	"hermes/app/aws"
 	"hermes/app/cloudflare"
@@ -120,6 +121,7 @@ func (s *Server) GetResourceSnapshotHandler(w http.ResponseWriter, r *http.Reque
 
 	snapshot := types.ResourceSnapshot{
 		Definition: resource,
+		Healthy:    status.IsHealthy(),
 		Status:     status,
 	}
 
@@ -260,9 +262,43 @@ func getProjectDefinitions() ([]types.ProjectDefinition, error) {
 		return []types.ProjectDefinition{}, err
 	}
 
-	// TODO: better error checking, for example ensuring that all resource types are valid
+	// TODO: custom Unmarshaler
+	// https://stackoverflow.com/questions/53569573/parsing-string-to-enum-from-json-in-golang
+	for _, project := range projectDefinitions {
+		for _, deployment := range project.Deployments {
+			for _, resource := range deployment.Resources {
+				if !types.IsResourceType(string(resource.Type)) {
+					return []types.ProjectDefinition{},
+						fmt.Errorf("invalid resource type: %s", resource.Name)
+				}
+			}
+		}
+	}
 
 	return projectDefinitions, nil
+}
+
+func getRequiredEnvVars(projectDefinitions []types.ProjectDefinition) []string {
+	requiredCredentials := []string{}
+
+	for _, project := range projectDefinitions {
+		for _, deployment := range project.Deployments {
+			for _, resource := range deployment.Resources {
+				if strings.HasPrefix(resource.Name, "aws") {
+					requiredCredentials = append(requiredCredentials, "AWS_ACCESS_KEY_ID")
+					requiredCredentials = append(requiredCredentials, "AWS_SECRET_ACCESS_KEY")
+					requiredCredentials = append(requiredCredentials, "AWS_REGION")
+				} else if strings.HasPrefix(resource.Name, "cloudflare") {
+					requiredCredentials = append(requiredCredentials, "CLOUDFLARE_EMAIL")
+					requiredCredentials = append(requiredCredentials, "CLOUDFLARE_API_KEY")
+					requiredCredentials = append(requiredCredentials, "CLOUDFLARE_ACCOUNT_ID")
+
+				}
+			}
+		}
+	}
+
+	return requiredCredentials
 }
 
 type Server struct {
@@ -271,27 +307,23 @@ type Server struct {
 }
 
 func main() {
-	for _, requiredEnvVar := range []string{
-		"AWS_ACCESS_KEY_ID",
-		"AWS_SECRET_ACCESS_KEY",
-		"AWS_REGION",
-		"CLOUDFLARE_EMAIL",
-		"CLOUDFLARE_API_KEY",
-		"CLOUDFLARE_ACCOUNT_ID",
-	} {
-		_, found := os.LookupEnv(requiredEnvVar)
-
-		if !found {
-			fmt.Printf("required environment variable %s not found\n", requiredEnvVar)
-			os.Exit(1)
-		}
-	}
 
 	projectDefinitions, err := getProjectDefinitions()
 
 	if err != nil {
 		fmt.Println("error getting project definitions", err)
 		os.Exit(1)
+	}
+
+	requiredEnvVars := getRequiredEnvVars(projectDefinitions)
+
+	for _, requiredEnvVar := range requiredEnvVars {
+		_, found := os.LookupEnv(requiredEnvVar)
+
+		if !found {
+			fmt.Printf("required environment variable %s not found\n", requiredEnvVar)
+			os.Exit(1)
+		}
 	}
 
 	fmt.Println(projectDefinitions)
