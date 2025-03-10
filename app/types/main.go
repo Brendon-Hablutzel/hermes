@@ -6,6 +6,7 @@ const (
 	ECSResource             ResourceType = "aws-ecs"
 	RDSResource             ResourceType = "aws-rds"
 	ELBResource             ResourceType = "aws-elb"
+	APIGatewayResource      ResourceType = "aws-apigw"
 	CloudflarePagesResource ResourceType = "cloudflare-pages"
 )
 
@@ -13,6 +14,7 @@ func IsResourceType(s string) bool {
 	return s == string(ECSResource) ||
 		s == string(RDSResource) ||
 		s == string(ELBResource) ||
+		s == string(APIGatewayResource) ||
 		s == string(CloudflarePagesResource)
 }
 

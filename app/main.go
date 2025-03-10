@@ -361,12 +361,19 @@ func main() {
 		os.Exit(1)
 	}
 
+	apigwClient, err := aws.GetAPIGatewayClient()
+	if err != nil {
+		log.Println("error getting apigw client", err)
+		os.Exit(1)
+	}
+
 	cloudflareClient := cloudflare.GetCloudflareClient()
 
 	clients := common.Clients{
 		EcsClient:        ecsClient,
 		RdsClient:        rdsClient,
 		ElbClient:        elbClient,
+		ApiGatewayClient: apigwClient,
 		CloudflareClient: cloudflareClient,
 	}
 

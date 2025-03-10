@@ -5,6 +5,7 @@ go 1.23.3
 require (
 	github.com/aws/aws-sdk-go-v2 v1.36.3
 	github.com/aws/aws-sdk-go-v2/config v1.29.8
+	github.com/aws/aws-sdk-go-v2/service/apigatewayv2 v1.26.1
 	github.com/aws/aws-sdk-go-v2/service/ecs v1.54.0
 	github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.44.1
 	github.com/aws/aws-sdk-go-v2/service/rds v1.94.0
