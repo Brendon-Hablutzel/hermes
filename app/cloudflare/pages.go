@@ -2,6 +2,7 @@ package cloudflare
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"hermes/app/types"
 	"os"
@@ -13,6 +14,7 @@ import (
 var _ types.ResourceStatus = PagesStatus{}
 
 type PagesStatus struct {
+	InstanceExists            bool   `json:"exists"`
 	CanonicalDeploymentStatus string `json:"status"`
 	CanonicalDeploymentUrl    string `json:"url"`
 }
@@ -21,6 +23,10 @@ func (p PagesStatus) IsResourceStatus() {}
 
 func (p PagesStatus) IsHealthy() bool {
 	return p.CanonicalDeploymentStatus == "success"
+}
+
+func (p PagesStatus) Exists() bool {
+	return p.InstanceExists
 }
 
 func (p PagesStatus) GetStatusString() string {
@@ -43,7 +49,17 @@ func GetPagesStatus(client *cloudflare.Client, projectName string) (PagesStatus,
 	)
 
 	if err != nil {
-		return PagesStatus{}, nil
+		// if errors.As(err, )
+		var cloudflareErr *cloudflare.Error
+		if errors.As(err, &cloudflareErr) {
+			if cloudflareErr.StatusCode == 404 {
+				return PagesStatus{
+					InstanceExists: false,
+				}, nil
+			}
+		}
+
+		return PagesStatus{}, err
 	}
 
 	// TODO: specific deployments + pagination
@@ -62,6 +78,7 @@ func GetPagesStatus(client *cloudflare.Client, projectName string) (PagesStatus,
 	// fmt.Println(string(j))
 
 	return PagesStatus{
+		InstanceExists:            true,
 		CanonicalDeploymentStatus: project.CanonicalDeployment.LatestStage.Status,
 		CanonicalDeploymentUrl:    project.CanonicalDeployment.URL,
 	}, nil

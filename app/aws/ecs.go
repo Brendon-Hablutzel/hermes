@@ -2,7 +2,6 @@ package aws
 
 import (
 	"context"
-	"fmt"
 	"hermes/app/types"
 	"time"
 
@@ -13,16 +12,21 @@ import (
 var _ types.ResourceStatus = ECSStatus{}
 
 type ECSStatus struct {
-	Status       string       `json:"status"`
-	TasksPending int          `json:"tasks_pending"`
-	TasksRunning int          `json:"tasks_running"`
-	Services     []ECSService `json:"services"`
+	InstanceExists bool         `json:"exists"`
+	Status         string       `json:"status"`
+	TasksPending   int          `json:"tasks_pending"`
+	TasksRunning   int          `json:"tasks_running"`
+	Services       []ECSService `json:"services"`
 }
 
 func (e ECSStatus) IsResourceStatus() {}
 
 func (e ECSStatus) IsHealthy() bool {
 	return e.Status == "ACTIVE"
+}
+
+func (e ECSStatus) Exists() bool {
+	return e.InstanceExists
 }
 
 func (e ECSStatus) GetStatusString() string {
@@ -48,7 +52,9 @@ func GetECSStatus(client *ecs.Client, clusterIdentifier string) (ECSStatus, erro
 	}
 
 	if len(resp.Clusters) == 0 {
-		return ECSStatus{}, fmt.Errorf("no cluster found")
+		return ECSStatus{
+			InstanceExists: false,
+		}, nil
 	}
 
 	firstCluster := resp.Clusters[0]
@@ -85,10 +91,11 @@ func GetECSStatus(client *ecs.Client, clusterIdentifier string) (ECSStatus, erro
 	}
 
 	return ECSStatus{
-		Status:       *firstCluster.Status,
-		TasksPending: int(firstCluster.PendingTasksCount),
-		TasksRunning: int(firstCluster.RunningTasksCount),
-		Services:     services,
+		InstanceExists: true,
+		Status:         *firstCluster.Status,
+		TasksPending:   int(firstCluster.PendingTasksCount),
+		TasksRunning:   int(firstCluster.RunningTasksCount),
+		Services:       services,
 	}, nil
 }
 

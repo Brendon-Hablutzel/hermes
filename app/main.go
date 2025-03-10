@@ -137,6 +137,7 @@ func (s *Server) GetResourceSnapshotHandler(w http.ResponseWriter, r *http.Reque
 	snapshot := types.ResourceSnapshot{
 		Definition: resource,
 		Healthy:    status.IsHealthy(),
+		Exists:     status.Exists(),
 		Status:     status,
 	}
 
@@ -307,7 +308,6 @@ func getRequiredEnvVars(projectDefinitions []types.ProjectDefinition) []string {
 					requiredCredentials = append(requiredCredentials, "CLOUDFLARE_EMAIL")
 					requiredCredentials = append(requiredCredentials, "CLOUDFLARE_API_KEY")
 					requiredCredentials = append(requiredCredentials, "CLOUDFLARE_ACCOUNT_ID")
-
 				}
 			}
 		}

@@ -2,6 +2,7 @@ package aws
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"hermes/app/types"
 
@@ -13,14 +14,19 @@ import (
 var _ types.ResourceStatus = ELBStatus{}
 
 type ELBStatus struct {
-	Status  elb_types.LoadBalancerStateEnum `json:"status"`
-	DNSName string                          `json:"dns_name"`
+	InstanceExists bool                            `json:"exists"`
+	Status         elb_types.LoadBalancerStateEnum `json:"status"`
+	DNSName        string                          `json:"dns_name"`
 }
 
 func (e ELBStatus) IsResourceStatus() {}
 
 func (e ELBStatus) IsHealthy() bool {
 	return e.Status == "active"
+}
+
+func (e ELBStatus) Exists() bool {
+	return e.InstanceExists
 }
 
 func (e ELBStatus) GetStatusString() string {
@@ -33,6 +39,13 @@ func GetELBStatus(client *elasticloadbalancingv2.Client, elbName string) (ELBSta
 	})
 
 	if err != nil {
+		var notFound *elb_types.LoadBalancerNotFoundException
+		if errors.As(err, &notFound) {
+			return ELBStatus{
+				InstanceExists: false,
+			}, nil
+		}
+
 		return ELBStatus{}, err
 	}
 
@@ -43,8 +56,9 @@ func GetELBStatus(client *elasticloadbalancingv2.Client, elbName string) (ELBSta
 	loadBalancer := result.LoadBalancers[0]
 
 	return ELBStatus{
-		Status:  loadBalancer.State.Code,
-		DNSName: *loadBalancer.DNSName,
+		InstanceExists: true,
+		Status:         loadBalancer.State.Code,
+		DNSName:        *loadBalancer.DNSName,
 	}, nil
 }
 

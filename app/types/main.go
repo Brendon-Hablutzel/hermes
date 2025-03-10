@@ -37,6 +37,7 @@ type ProjectDefinition struct {
 type ResourceStatus interface {
 	IsResourceStatus()
 	IsHealthy() bool
+	Exists() bool
 	GetStatusString() string
 }
 
@@ -44,4 +45,5 @@ type ResourceSnapshot struct {
 	Definition ResourceDefinition `json:"definition"`
 	Status     ResourceStatus     `json:"status"`
 	Healthy    bool               `json:"healthy"`
+	Exists     bool               `json:"exists"`
 }

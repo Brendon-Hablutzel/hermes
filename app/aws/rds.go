@@ -2,25 +2,32 @@ package aws
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"hermes/app/types"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/rds"
+	rds_types "github.com/aws/aws-sdk-go-v2/service/rds/types"
 )
 
 var _ types.ResourceStatus = RDSStatus{}
 
 type RDSStatus struct {
-	Status        string `json:"status"`
-	InstanceClass string `json:"instance_class"`
+	InstanceExists bool   `json:"exists"`
+	Status         string `json:"status"`
+	InstanceClass  string `json:"instance_class"`
 }
 
 func (r RDSStatus) IsResourceStatus() {}
 
 func (r RDSStatus) IsHealthy() bool {
 	return r.Status == "available"
+}
+
+func (r RDSStatus) Exists() bool {
+	return r.InstanceExists
 }
 
 func (r RDSStatus) GetStatusString() string {
@@ -33,6 +40,13 @@ func GetRDSStatus(client *rds.Client, dbIdentifier string) (RDSStatus, error) {
 	})
 
 	if err != nil {
+		var notFound *rds_types.DBInstanceNotFoundFault
+		if errors.As(err, &notFound) {
+			return RDSStatus{
+				InstanceExists: false,
+			}, nil
+		}
+
 		return RDSStatus{}, err
 	}
 
@@ -43,8 +57,9 @@ func GetRDSStatus(client *rds.Client, dbIdentifier string) (RDSStatus, error) {
 	firstDb := resp.DBInstances[0]
 
 	return RDSStatus{
-		Status:        *firstDb.DBInstanceStatus,
-		InstanceClass: *firstDb.DBInstanceClass,
+		InstanceExists: true,
+		Status:         *firstDb.DBInstanceStatus,
+		InstanceClass:  *firstDb.DBInstanceClass,
 	}, nil
 }
 

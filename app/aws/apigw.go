@@ -2,7 +2,6 @@ package aws
 
 import (
 	"context"
-	"fmt"
 	"hermes/app/types"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -13,17 +12,22 @@ import (
 var _ types.ResourceStatus = APIGatewayStatus{}
 
 type APIGatewayStatus struct {
-	Endpoint string `json:"endpoint"`
-	Protocol string `json:"protocol"`
+	InstanceExists bool   `json:"exists"`
+	Endpoint       string `json:"endpoint"`
+	Protocol       string `json:"protocol"`
 }
 
-func (e APIGatewayStatus) IsResourceStatus() {}
+func (a APIGatewayStatus) IsResourceStatus() {}
 
-func (e APIGatewayStatus) IsHealthy() bool {
+func (a APIGatewayStatus) IsHealthy() bool {
 	return true
 }
 
-func (e APIGatewayStatus) GetStatusString() string {
+func (a APIGatewayStatus) Exists() bool {
+	return a.InstanceExists
+}
+
+func (a APIGatewayStatus) GetStatusString() string {
 	return "active"
 }
 
@@ -44,7 +48,9 @@ func GetAPIGatewayStatus(client *apigatewayv2.Client, apiName string) (APIGatewa
 	}
 
 	if apiId == "" {
-		return APIGatewayStatus{}, fmt.Errorf("no api with name %s found", apiName)
+		return APIGatewayStatus{
+			InstanceExists: false,
+		}, nil
 	}
 
 	resp, err := client.GetApi(context.TODO(), &apigatewayv2.GetApiInput{
@@ -58,8 +64,9 @@ func GetAPIGatewayStatus(client *apigatewayv2.Client, apiName string) (APIGatewa
 	// TODO: maybe more info
 
 	return APIGatewayStatus{
-		Endpoint: *resp.ApiEndpoint,
-		Protocol: string(resp.ProtocolType),
+		InstanceExists: true,
+		Endpoint:       *resp.ApiEndpoint,
+		Protocol:       string(resp.ProtocolType),
 	}, nil
 }
 
