@@ -65,6 +65,21 @@ func findResource(deployment types.DeploymentDefinition, name string) (types.Res
 	return resource, true
 }
 
+type GetProjectsResponse struct {
+	Projects []types.ProjectDefinition `json:"projects"`
+}
+
+func (s *Server) GetProjectsHandler(w http.ResponseWriter, r *http.Request) {
+	err := json.NewEncoder(w).Encode(GetProjectsResponse{
+		Projects: s.Projects,
+	})
+
+	if err != nil {
+		log.Println("failed to encode get projects response", err)
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
+}
+
 type GetProjectDefinitionResponse struct {
 	Project types.ProjectDefinition `json:"project"`
 }
@@ -367,6 +382,7 @@ func main() {
 
 	router.Handle("/metrics", promhttp.Handler())
 
+	router.HandleFunc("/projects", server.GetProjectsHandler)
 	router.HandleFunc("/projects/{project}", server.GetProjectDefinitionHandler)
 	// router.HandleFunc("/projects/{project}/deployments/{deployment}/snapshot", server.GetDeploymentSnapshotHandler)
 	router.HandleFunc("/projects/{project}/deployments/{deployment}/resources/{resource}/snapshot", server.GetResourceSnapshotHandler)
