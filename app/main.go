@@ -299,11 +299,11 @@ func getRequiredEnvVars(projectDefinitions []types.ProjectDefinition) []string {
 	for _, project := range projectDefinitions {
 		for _, deployment := range project.Deployments {
 			for _, resource := range deployment.Resources {
-				if strings.HasPrefix(resource.Name, "aws") {
+				if strings.HasPrefix(string(resource.Type), "aws") {
 					requiredCredentials = append(requiredCredentials, "AWS_ACCESS_KEY_ID")
 					requiredCredentials = append(requiredCredentials, "AWS_SECRET_ACCESS_KEY")
 					requiredCredentials = append(requiredCredentials, "AWS_REGION")
-				} else if strings.HasPrefix(resource.Name, "cloudflare") {
+				} else if strings.HasPrefix(string(resource.Name), "cloudflare") {
 					requiredCredentials = append(requiredCredentials, "CLOUDFLARE_EMAIL")
 					requiredCredentials = append(requiredCredentials, "CLOUDFLARE_API_KEY")
 					requiredCredentials = append(requiredCredentials, "CLOUDFLARE_ACCOUNT_ID")
