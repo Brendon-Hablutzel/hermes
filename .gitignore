@@ -1,3 +1,5 @@
 .env
 
-*.json
+projects.json
+
+projects.yaml

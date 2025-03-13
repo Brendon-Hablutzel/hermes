@@ -17,6 +17,7 @@ import (
 
 	prometheus_client "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"gopkg.in/yaml.v3"
 )
 
 func findProject(projects []types.ProjectDefinition, name string) (types.ProjectDefinition, bool) {
@@ -267,13 +268,13 @@ func corsMiddleware(next http.Handler) http.Handler {
 }
 
 func getProjectDefinitions() ([]types.ProjectDefinition, error) {
-	data, err := os.ReadFile("projects.json")
+	data, err := os.ReadFile("projects.yaml")
 	if err != nil {
 		return []types.ProjectDefinition{}, err
 	}
 
 	var projectDefinitions []types.ProjectDefinition
-	err = json.Unmarshal(data, &projectDefinitions)
+	err = yaml.Unmarshal(data, &projectDefinitions)
 	if err != nil {
 		return []types.ProjectDefinition{}, err
 	}
